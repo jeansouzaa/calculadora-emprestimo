@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Empréstimos</title>
+    <link rel="icon" type="image/jpg" href="images/totvs-logo.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --card-bg: rgba(226, 226, 226, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #ffffff;
+            --primary: #000000;
+            --primary-hover: #066422;
+            --accent: #0ea5e9;
+            --error: #ef4444;
+            --success: #10b981;
+            --border-radius: 12px;
+            --font-display: 'Outfit', sans-serif;
+            --font-sans: 'Inter', sans-serif;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: white;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: left;
+            margin-bottom: 2.5rem;
+            margin-top: 2.54rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.5rem;
+            color: black;
+        }
+
+        .card {
+            background: white;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 2px;
+            padding: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            align-items: end;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: rgb(58, 58, 58);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(85, 85, 85, 0.24);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: rgba(24, 23, 23, 0.514);
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            outline: none;
+            transition: var(--transition);
+            width: 100%;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+            background: rgba(224, 224, 224, 0.952);
+        }
+
+        input:hover:not(:focus) {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-submit {
+            background: rgb(0 218 254);
+            color: #fdfdfd;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 42px;
+            gap: 0.5rem;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background: rgba(9, 120, 139, 0.432);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            background: rgba(141, 152, 224, 0.486);
+            color: rgba(0, 0, 0, 0.007);
+            cursor: not-allowed;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .table-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 2px;
+            overflow-x: auto;
+            max-height: 800px;
+            position: relative;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: #15438b;
+            z-index: 10;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            padding: 0.75rem 1rem;
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.02em;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th.group-header {
+            text-align: center;
+            background: #15438b;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            color: black;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: var(--transition);
+        }
+
+        tbody tr:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(207, 206, 206, 0.945);
+        }
+
+        td:first-child,
+        th:first-child {
+            text-align: center;
+        }
+
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Calculadora de Empréstimos</h1>
+        </header>
+
+        <div class="card">
+            <div id="alertError" class="alert-error"></div>
+            <form id="calculatorForm" onsubmit="event.preventDefault(); calculate();">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="startDate">Data Inicial</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="endDate">Data Final</label>
+                        <input type="date" id="endDate" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="firstPaymentDate">Primeiro Pagamento</label>
+                        <input type="date" id="firstPaymentDate" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="loanAmount">Valor do Empréstimo</label>
+                        <input type="text" id="loanAmount" placeholder="Ex: 140.000,00" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="interestRate">Taxa de Juros (a.a.)</label>
+                        <input type="text" id="interestRate" placeholder="Ex: 7 %" required>
+                    </div>
+                    <button type="submit" id="btnSubmit" class="btn-submit" disabled>
+                        <div id="btnLoader" class="loader"></div>
+                        <span id="btnText">Calcular</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="table-container" id="resultContainer" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="3" class="group-header">Empréstimo</th>
+                        <th colspan="2" class="group-header">Parcela</th>
+                        <th colspan="2" class="group-header">Principal</th>
+                        <th colspan="3" class="group-header">Juros</th>
+                    </tr>
+                    <tr>
+                        <th>Data Competência</th>
+                        <th>Valor de empréstimo</th>
+                        <th>Saldo Devedor</th>
+                        <th>Consolidada</th>
+                        <th>Total</th>
+                        <th>Amortização</th>
+                        <th>Saldo</th>
+                        <th>Provisão</th>
+                        <th>Acumulado</th>
+                        <th>Pago</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('calculatorForm');
+        const btnSubmit = document.getElementById('btnSubmit');
+        const alertError = document.getElementById('alertError');
+        const loanAmountInput = document.getElementById('loanAmount');
+        const interestRateInput = document.getElementById('interestRate');
+
+        const inputs = Array.from(form.querySelectorAll('input'));
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        }
+
+        function formatPercent(value) {
+            return new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value / 100);
+        }
+
+        function parseFormattedNumber(value) {
+            if (!value) return 0;
+            let clean = value.replace(/[^\d,.-]/g, '');
+            if (clean.includes(',') && clean.includes('.')) {
+                clean = clean.replace(/\./g, '').replace(',', '.');
+            } else if (clean.includes(',')) {
+                clean = clean.replace(',', '.');
+            }
+            return parseFloat(clean) || 0;
+        }
+
+        loanAmountInput.addEventListener('blur', () => {
+            const val = parseFormattedNumber(loanAmountInput.value);
+            if (val > 0) {
+                loanAmountInput.value = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            validateForm();
+        });
+
+        interestRateInput.addEventListener('blur', () => {
+            const val = parseFormattedNumber(interestRateInput.value);
+            if (val > 0) {
+                interestRateInput.value = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
+            }
+            validateForm();
+        });
+
+        inputs.forEach(input => {
+            input.addEventListener('input', validateForm);
+        });
+
+        function validateForm() {
+            let allFilled = true;
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    allFilled = false;
+                }
+            });
+
+            if (allFilled) {
+                const startDate = new Date(document.getElementById('startDate').value);
+                const endDate = new Date(document.getElementById('endDate').value);
+                const firstPaymentDate = new Date(document.getElementById('firstPaymentDate').value);
+                const loanAmountVal = parseFormattedNumber(loanAmountInput.value);
+                const interestRateVal = parseFormattedNumber(interestRateInput.value);
+
+                let valid = true;
+                let errorMsg = '';
+
+                if (endDate <= startDate) {
+                    valid = false;
+                    errorMsg = 'A data final deve ser maior que a data inicial.';
+                } else if (firstPaymentDate <= startDate || firstPaymentDate >= endDate) {
+                    valid = false;
+                    errorMsg = 'A data de primeiro pagamento deve ser maior que a data inicial e menor que a data final.';
+                } else if (loanAmountVal <= 0) {
+                    valid = false;
+                    errorMsg = 'O valor do empréstimo deve ser maior que zero.';
+                } else if (interestRateVal <= 0) {
+                    valid = false;
+                    errorMsg = 'A taxa de juros deve ser maior que zero.';
+                }
+
+                if (valid) {
+                    alertError.style.display = 'none';
+                    btnSubmit.disabled = false;
+                } else {
+                    alertError.innerText = errorMsg;
+                    alertError.style.display = 'block';
+                    btnSubmit.disabled = true;
+                }
+            } else {
+                btnSubmit.disabled = true;
+            }
+        }
+
+        async function calculate() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const firstPaymentDate = document.getElementById('firstPaymentDate').value;
+            const loanAmount = parseFormattedNumber(loanAmountInput.value);
+            const interestRate = parseFormattedNumber(interestRateInput.value);
+
+            const payload = {
+                initialDate: startDate,
+                finalDate: endDate,
+                firstPaymentDate: firstPaymentDate,
+                loanValue: loanAmount,
+                interestRate: interestRate
+            };
+
+            const btnLoader = document.getElementById('btnLoader');
+
+            btnSubmit.disabled = true;
+            btnLoader.style.display = 'block';
+            alertError.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/loan/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erro ao realizar cálculo.');
+                }
+
+                renderTable(data);
+            } catch (err) {
+                alertError.innerText = err.message;
+                alertError.style.display = 'block';
+            } finally {
+                btnSubmit.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('resultBody');
+            tbody.innerHTML = '';
+            console.log("data");
+            console.log(data);
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+
+                const dateObj = row.referenceDate;
+                //const formattedDate = dateObj.toLocaleDateString('pt-BR');
+
+                const displayDisbursement = row.loanValue > 0 ? formatCurrency(row.loanValue) : '0,00';
+                const displayTotal = row.totalInstallmentAmount > 0 ? formatCurrency(row.totalInstallmentAmount) : '0,00';
+                const displayAmortization = row.amortization > 0 ? formatCurrency(row.amortization) : '0,00';
+                const displayProvisao = row.interestProvision > 0 ? formatCurrency(row.interestProvision) : '0,00';
+                const displayAcumulado = row.interestAccrued > 0 ? formatCurrency(row.interestAccrued): '0,00';
+                const displayPago = row.interestPaid > 0 ? formatCurrency(row.interestPaid) : '0,00';
+
+                tr.innerHTML = `
+                    <td>${dateObj}</td>
+                    <td>${displayDisbursement}</td>
+                    <td>${formatCurrency(row.outstandingBalance)}</td>
+                    <td>${row.consolidatedInstallment || ''}</td>
+                    <td>${displayTotal}</td>
+                    <td>${displayAmortization}</td>
+                    <td>${formatCurrency(row.loanBalance)}</td>
+                    <td>${displayProvisao}</td>
+                    <td>${displayAcumulado}</td>
+                    <td>${displayPago}</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('resultContainer').style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>
