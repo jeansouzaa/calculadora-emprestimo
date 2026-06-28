@@ -3,6 +3,7 @@ package com.totvs.loancalculator.controllers;
 import com.totvs.loancalculator.dtos.LoanRequest;
 import com.totvs.loancalculator.dtos.LoanResponse;
 import com.totvs.loancalculator.services.LoanService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,7 +20,7 @@ public class LoanController
     LoanService loanService;
 
     @PostMapping("calculate")
-    public List<LoanResponse> calculateLoan(@RequestBody LoanRequest loanRequest)
+    public List<LoanResponse> calculateLoan(@Valid @RequestBody LoanRequest loanRequest)
     {
         return loanService.calculateLoan(loanRequest);
     }

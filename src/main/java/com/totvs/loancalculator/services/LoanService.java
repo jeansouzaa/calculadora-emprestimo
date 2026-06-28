@@ -3,13 +3,13 @@ package com.totvs.loancalculator.services;
 import br.com.quantis.libraries.calendar.brazil.BrazilianCalendar;
 import com.totvs.loancalculator.dtos.LoanRequest;
 import com.totvs.loancalculator.dtos.LoanResponse;
-import com.totvs.loancalculator.enums.Holidays;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
@@ -22,6 +22,7 @@ public class LoanService
     private static final long ONE = 1L;
     private static final long TWO = 2L;
     private static final int DAY_BASIS = 360;
+    private static final int CALC_SCALE = 10;
     private static final DateTimeFormatter BR_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public List<LoanResponse> calculateLoan(LoanRequest loanRequest)
@@ -33,23 +34,25 @@ public class LoanService
         LocalDate lastReferenceDate = null;
         BigDecimal balance = loanRequest.getLoanValue();
         List<LoanResponse> loanResponses = new ArrayList<>();
-        long qtyInstallments = ChronoUnit.MONTHS.between(loanRequest.getFirstPaymentDate(), loanRequest.getFinalDate()) + 2L;
+        YearMonth yearMonthFirstPayment = YearMonth.from(loanRequest.getFirstPaymentDate());
+        YearMonth yearMonthFinal = YearMonth.from(loanRequest.getFinalDate());
+        long qtyInstallments = ChronoUnit.MONTHS.between(yearMonthFirstPayment, yearMonthFinal) + 1;
         int count = 1;
         BigDecimal loanValue = loanRequest.getLoanValue();
         for (LocalDate date = loanRequest.getInitialDate(); !date.isAfter(loanRequest.getFinalDate()); date = date.plusDays(ONE))
         {
             LocalDate lastDayMonth = date.with(TemporalAdjusters.lastDayOfMonth());
-            if (date.equals(loanRequest.getInitialDate()) || date.equals(paymentDay) || date.equals(lastDayMonth))
+            if (date.equals(loanRequest.getInitialDate()) || date.equals(paymentDay) || date.equals(lastDayMonth) || date.equals(loanRequest.getFinalDate()))
             {
                 String consolidateInstallment = "";
                 if (date.equals(paymentDay) || date.equals(loanRequest.getFinalDate()))
                 {
                     date = validateHolidaysAndSaturdayAndSunday(date);
-
-                    consolidateInstallment = count + "/" + qtyInstallments;
-                    paymentDay = paymentDay.plusMonths(ONE);
+                    consolidateInstallment = updateConsolidatedInstallment(count, qtyInstallments);
                     count++;
+                    paymentDay = updatePaymentDay(paymentDay);
                 }
+
                 BigDecimal amortization = calculateAmortization(consolidateInstallment, loanRequest.getLoanValue(), qtyInstallments);
                 BigDecimal loanBalance = calculateLoanBalance(balance, amortization);
                 interestProvision = calculateInterestProvision(loanRequest.getInterestRate(), date, lastReferenceDate, balance, interestAccrued);
@@ -64,6 +67,16 @@ public class LoanService
             loanValue = BigDecimal.ZERO;
         }
         return loanResponses;
+    }
+
+    private String updateConsolidatedInstallment(int count, long qtyInstallments)
+    {
+        return count + "/" + qtyInstallments;
+    }
+
+    private LocalDate updatePaymentDay(LocalDate paymentDay)
+    {
+        return paymentDay.plusMonths(ONE);
     }
 
     private LocalDate validateHolidaysAndSaturdayAndSunday(LocalDate date)
@@ -108,7 +121,7 @@ public class LoanService
 
     private BigDecimal calculateAmortization(String consolidatedInstallment, BigDecimal loanValue, long qtyInstallments)
     {
-        return consolidatedInstallment != null && !consolidatedInstallment.trim().isEmpty() ? loanValue.divide(BigDecimal.valueOf(qtyInstallments),2, RoundingMode.HALF_EVEN) : BigDecimal.ZERO;
+        return consolidatedInstallment != null && !consolidatedInstallment.trim().isEmpty() ? loanValue.divide(BigDecimal.valueOf(qtyInstallments), CALC_SCALE, RoundingMode.HALF_UP) : BigDecimal.ZERO;
     }
 
     private BigDecimal calculateInterestAccrued(BigDecimal interestAccrued, BigDecimal interestProvision, BigDecimal interestPaid)
