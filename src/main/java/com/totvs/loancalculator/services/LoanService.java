@@ -1,11 +1,14 @@
 package com.totvs.loancalculator.services;
 
+import br.com.quantis.libraries.calendar.brazil.BrazilianCalendar;
 import com.totvs.loancalculator.dtos.LoanRequest;
 import com.totvs.loancalculator.dtos.LoanResponse;
+import com.totvs.loancalculator.enums.Holidays;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -14,12 +17,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class LoanService {
+public class LoanService
+{
     private static final long ONE = 1L;
+    private static final long TWO = 2L;
     private static final int DAY_BASIS = 360;
     private static final DateTimeFormatter BR_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public List<LoanResponse> calculateLoan(LoanRequest loanRequest) {
+    public List<LoanResponse> calculateLoan(LoanRequest loanRequest)
+    {
         LocalDate paymentDay = loanRequest.getFirstPaymentDate();
         BigDecimal interestProvision = BigDecimal.ZERO;
         BigDecimal interestAccrued = BigDecimal.ZERO;
@@ -27,31 +33,43 @@ public class LoanService {
         LocalDate lastReferenceDate = null;
         BigDecimal balance = loanRequest.getLoanValue();
         List<LoanResponse> loanResponses = new ArrayList<>();
-        long qtyInstallments = ChronoUnit.MONTHS.between(loanRequest.getFirstPaymentDate(), loanRequest.getFinalDate())
-                + 2L;
+        long qtyInstallments = ChronoUnit.MONTHS.between(loanRequest.getFirstPaymentDate(), loanRequest.getFinalDate()) + 2L;
         int count = 1;
         BigDecimal loanValue = loanRequest.getLoanValue();
-        for (LocalDate date = loanRequest.getInitialDate(); !date.isAfter(loanRequest.getFinalDate()); date = date
-                .plusDays(ONE)) {
+        for (LocalDate date = loanRequest.getInitialDate(); !date.isAfter(loanRequest.getFinalDate()); date = date.plusDays(ONE))
+        {
             LocalDate lastDayMonth = date.with(TemporalAdjusters.lastDayOfMonth());
-            if (date.equals(loanRequest.getInitialDate()) || date.equals(paymentDay) || date.equals(lastDayMonth)) {
+            if (date.equals(loanRequest.getInitialDate()) || date.equals(paymentDay) || date.equals(lastDayMonth))
+            {
                 String consolidateInstallment = "";
-                if (date.equals(paymentDay) || date.equals(loanRequest.getFinalDate())) {
+                if (date.equals(paymentDay) || date.equals(loanRequest.getFinalDate()))
+                {
+                    while(true)
+                    {
+                        if(date.getDayOfWeek().equals(DayOfWeek.SATURDAY))
+                        {
+                            date = date.plusDays(TWO);
+                        }
+                        else if(date.getDayOfWeek().equals(DayOfWeek.SUNDAY) || BrazilianCalendar.isBankingHoliday(date))
+                        {
+                            date = date.plusDays(ONE);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                     consolidateInstallment = count + "/" + qtyInstallments;
                     paymentDay = paymentDay.plusMonths(ONE);
                     count++;
                 }
                 BigDecimal amortization = calculateAmortization(consolidateInstallment, loanRequest.getLoanValue(), qtyInstallments);
                 BigDecimal loanBalance = calculateLoanBalance(balance, amortization);
-                interestProvision = calculateInterestProvision(loanRequest.getInterestRate(), date, lastReferenceDate,
-                        balance, interestAccrued);
+                interestProvision = calculateInterestProvision(loanRequest.getInterestRate(), date, lastReferenceDate, balance, interestAccrued);
                 interestPaid = calculateInterestPaid(consolidateInstallment, interestAccrued, interestProvision);
                 interestAccrued = calculateInterestAccrued(interestAccrued, interestProvision, interestPaid);
                 String referenceDate = date.format(BR_FORMAT);
-                LoanResponse response = new LoanResponse(referenceDate,
-                        calculateOutstandingBalance(loanBalance, interestAccrued), consolidateInstallment, loanValue,
-                        calculateTotalInstallmentAmount(amortization, interestPaid), amortization, loanBalance,
-                        interestProvision, interestAccrued, interestPaid);
+                LoanResponse response = new LoanResponse(referenceDate, calculateOutstandingBalance(loanBalance, interestAccrued), consolidateInstallment, loanValue, calculateTotalInstallmentAmount(amortization, interestPaid), amortization, loanBalance, interestProvision, interestAccrued, interestPaid);
                 loanResponses.add(response);
                 balance = loanBalance;
                 lastReferenceDate = date;
@@ -61,55 +79,52 @@ public class LoanService {
         return loanResponses;
     }
 
-    private BigDecimal calculateTotalInstallmentAmount(BigDecimal amortization, BigDecimal interestPaid) {
+    private BigDecimal calculateTotalInstallmentAmount(BigDecimal amortization, BigDecimal interestPaid)
+    {
         return sumTwoDoubles(amortization, interestPaid);
     }
 
-    private BigDecimal sumTwoDoubles(BigDecimal firstDoubleValue, BigDecimal secondDoubleValue) {
+    private BigDecimal sumTwoDoubles(BigDecimal firstDoubleValue, BigDecimal secondDoubleValue)
+    {
         return firstDoubleValue.add(secondDoubleValue);
     }
 
-    private BigDecimal calculateOutstandingBalance(BigDecimal loanBalance, BigDecimal interestAccrued) {
+    private BigDecimal calculateOutstandingBalance(BigDecimal loanBalance, BigDecimal interestAccrued)
+    {
         return sumTwoDoubles(loanBalance, interestAccrued);
     }
 
-    private BigDecimal calculateLoanBalance(BigDecimal balance, BigDecimal amortization) {
+    private BigDecimal calculateLoanBalance(BigDecimal balance, BigDecimal amortization)
+    {
         return balance.subtract(amortization);
     }
 
-    private BigDecimal calculateAmortization(String consolidatedInstallment, BigDecimal loanValue, long qtyInstallments) {
-        return consolidatedInstallment != null && !consolidatedInstallment.trim().isEmpty()
-                ? loanValue.divide(BigDecimal.valueOf(qtyInstallments),2, RoundingMode.HALF_EVEN)
-                : BigDecimal.ZERO;
+    private BigDecimal calculateAmortization(String consolidatedInstallment, BigDecimal loanValue, long qtyInstallments)
+    {
+        return consolidatedInstallment != null && !consolidatedInstallment.trim().isEmpty() ? loanValue.divide(BigDecimal.valueOf(qtyInstallments),2, RoundingMode.HALF_EVEN) : BigDecimal.ZERO;
     }
 
-    private BigDecimal calculateInterestAccrued(BigDecimal interestAccrued, BigDecimal interestProvision,
-            BigDecimal interestPaid) {
+    private BigDecimal calculateInterestAccrued(BigDecimal interestAccrued, BigDecimal interestProvision, BigDecimal interestPaid)
+    {
         return sumTwoDoubles(interestAccrued, interestProvision).subtract(interestPaid);
     }
 
-    private BigDecimal calculateInterestPaid(String consolidatedInstallment, BigDecimal interestAccrued,
-            BigDecimal interestProvision) {
-        return consolidatedInstallment != null && !consolidatedInstallment.trim().isEmpty()
-                ? sumTwoDoubles(interestAccrued, interestProvision)
-                : BigDecimal.ZERO;
+    private BigDecimal calculateInterestPaid(String consolidatedInstallment, BigDecimal interestAccrued, BigDecimal interestProvision)
+    {
+        return consolidatedInstallment != null && !consolidatedInstallment.trim().isEmpty() ? sumTwoDoubles(interestAccrued, interestProvision) : BigDecimal.ZERO;
     }
 
-    private BigDecimal calculateInterestProvision(int interestRate, LocalDate referenceDateActual,
-            LocalDate lastReferenceDate, BigDecimal balance, BigDecimal interestAccrued) {
-        if (referenceDateActual == null || lastReferenceDate == null)
-            return BigDecimal.ZERO;
+    private BigDecimal calculateInterestProvision(int interestRate, LocalDate referenceDateActual, LocalDate lastReferenceDate, BigDecimal balance, BigDecimal interestAccrued)
+    {
+        if (referenceDateActual == null || lastReferenceDate == null) return BigDecimal.ZERO;
         int qtyDays = getQtyDaysBetweenDates(lastReferenceDate, referenceDateActual);
-        System.out.println("QTD DIAS " + qtyDays);
-        System.out.println("lastReferenceDate " + lastReferenceDate.format(BR_FORMAT));
-        System.out.println("referenceDateActual " + referenceDateActual.format(BR_FORMAT));
         double interestRateDecimal = interestRate;
         interestRateDecimal = interestRateDecimal / 100 + 1;
-        return sumTwoDoubles(balance, interestAccrued)
-                .multiply(BigDecimal.valueOf((Math.pow(interestRateDecimal, (double) qtyDays / DAY_BASIS) - 1)));
+        return sumTwoDoubles(balance, interestAccrued).multiply(BigDecimal.valueOf((Math.pow(interestRateDecimal, (double) qtyDays / DAY_BASIS) - 1)));
     }
 
-    private int getQtyDaysBetweenDates(LocalDate lastReferenceDate, LocalDate referenceDateActual) {
+    private int getQtyDaysBetweenDates(LocalDate lastReferenceDate, LocalDate referenceDateActual)
+    {
         return (int) ChronoUnit.DAYS.between(lastReferenceDate, referenceDateActual);
     }
 }
