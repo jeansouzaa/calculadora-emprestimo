@@ -44,21 +44,8 @@ public class LoanService
                 String consolidateInstallment = "";
                 if (date.equals(paymentDay) || date.equals(loanRequest.getFinalDate()))
                 {
-                    while(true)
-                    {
-                        if(date.getDayOfWeek().equals(DayOfWeek.SATURDAY))
-                        {
-                            date = date.plusDays(TWO);
-                        }
-                        else if(date.getDayOfWeek().equals(DayOfWeek.SUNDAY) || BrazilianCalendar.isBankingHoliday(date))
-                        {
-                            date = date.plusDays(ONE);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
+                    date = validateHolidaysAndSaturdayAndSunday(date);
+
                     consolidateInstallment = count + "/" + qtyInstallments;
                     paymentDay = paymentDay.plusMonths(ONE);
                     count++;
@@ -77,6 +64,26 @@ public class LoanService
             loanValue = BigDecimal.ZERO;
         }
         return loanResponses;
+    }
+
+    private LocalDate validateHolidaysAndSaturdayAndSunday(LocalDate date)
+    {
+        while(true)
+        {
+            if(date.getDayOfWeek().equals(DayOfWeek.SATURDAY))
+            {
+                date = date.plusDays(TWO);
+            }
+            else if(date.getDayOfWeek().equals(DayOfWeek.SUNDAY) || BrazilianCalendar.isBankingHoliday(date))
+            {
+                date = date.plusDays(ONE);
+            }
+            else
+            {
+                break;
+            }
+        }
+        return date;
     }
 
     private BigDecimal calculateTotalInstallmentAmount(BigDecimal amortization, BigDecimal interestPaid)
